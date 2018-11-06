@@ -1,6 +1,6 @@
 ## Getting Started
 
-1. Clone this repo with `git clone <copied-repo-url>`
+1. Clone this repo with `git clone git@github.com:reedbarger/next-connect.git`
 2. Install dependencies (`npm install` or `yarn install`)
 3. Go to [MLab](mlab.com) and create a new (free) database
 4. Copy the Database URI to connect using the Mongo Driver
