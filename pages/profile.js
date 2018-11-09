@@ -30,7 +30,7 @@ const styles = theme => ({
     }
   },
   title: {
-    color: theme.palette.openTitle
+    color: theme.palette.primary.main
   },
   progress: {
     margin: theme.spacing.unit * 2
