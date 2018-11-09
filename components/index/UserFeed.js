@@ -31,7 +31,7 @@ const styles = theme => ({
     right: theme.spacing.unit * 2
   },
   snack: {
-    color: theme.palette.protectedTitle
+    color: theme.palette.primary.light
   },
   viewButton: {
     verticalAlign: "middle"
