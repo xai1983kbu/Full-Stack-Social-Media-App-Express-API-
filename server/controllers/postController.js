@@ -1,17 +1,132 @@
-exports.uploadImage = () => {};
+const multer = require('multer');
+const jimp = require('jimp');
+const mongoose = require('mongoose');
+const Post = mongoose.model('Post');
 
-exports.resizeImage = () => {};
+const imageUploadOptions = {
+    storage: multer.memoryStorage(),
+    limits: {
+        // storing images files up to 1mb
+        fileSize: 1024 * 1024 * 1
+    },
+    fileFilter: (req, file, next) => {
+      // check the file MIME type we're going to check the typeof the file that is upload Avatar function is being given.
+      if (file.mimetype.startsWith('image/')) {
+          // null - not pass an message to uploadAvatar
+          // true to move on
+          next(null, true);
+      } else {
+          // false to not move on
+          next(null, false);
+      }
+    }
+};
 
-exports.addPost = () => {};
+exports.uploadImage = multer(imageUploadOptions).single('image');
 
-exports.deletePost = () => {};
+exports.resizeImage = async (req, res, next) => {
+    // So multer automatically puts the image on requests on the file property request.
+    if (!req.file) {
+        return next();
+    }
+    const extension = req.file.mimetype.split('/')[1]
+    req.body.image = `/static/uploads/${req.user.name}-${Date.now()}
+    .${extension}`;
+    const image = await jimp.read(req.file.buffer);
+    await image.resize(750, jimp.AUTO);
+    await image.write(`./${req.body.image}`);
+    next();
+};
 
-exports.getPostById = () => {};
 
-exports.getPostsByUser = () => {};
+exports.addPost = async (req, res) => {
+    req.body.postedBy = req.user._id;
+    const post = await new Post(req.body).save();
+    // https://mongoosejs.com/docs/populate.html
+    await Post.populate(post, {
+        path: "postedBy",
+        select: "_id name avatar"
+    });
+    res.json(post);
+};
 
-exports.getPostFeed = () => {};
+exports.deletePost = async (req, res) => {
+    const { _id } = req.post;
 
-exports.toggleLike = () => {};
+    if (!req.isPoster) {
+        return res.status(400).json({
+            message: "You are not authorized to perform this action"
+        });
+    }
+    const deletedPost = await Post.findOneAndDelete({ _id })
+    res.json(deletedPost);
+};
 
-exports.toggleComment = () => {};
+exports.getPostById = async (req, res, next, id) => {
+    const post = await Post.findOne({ _id: id});
+    req.post = post;
+
+    const posterId = mongoose.Types.ObjectId(req.post.postedBy._id);
+    if (req.user && posterId.equals(req.user._id)) {
+        req.isPoster = true;
+        return next();
+    }
+    next();
+};
+
+exports.getPostsByUser = async (req, res) => {
+    const posts = await Post.find({ postedBy: req.profile._id }).sort({
+        createdAt: "desc" // start with oldest posts
+    });
+    res.json(posts)
+};
+
+exports.getPostFeed = async (req, res) => {
+    const { following, _id } = req.profile;
+
+    following.push(_id);
+    // https://www.udemy.com/universal-react-with-nextjs-the-ultimate-guide/learn/v4/t/lecture/12505244?start=205
+    // Or I should say all of the posts that are that were made by the users whose IDs are in the following
+    const posts = await Post.find({ postedBy: { $in: following } }).sort({
+        createdAt: "desc"
+    });
+    res.json(posts);
+};
+
+exports.toggleLike = async (req, res) => {
+    const { postId } = req.body;
+
+    const post = await Post.findOne({ _id: postId });
+    // since we know that user IDs the under _id values aren't normal strings. We need to convert them to a string.
+    // https://www.udemy.com/universal-react-with-nextjs-the-ultimate-guide/learn/v4/t/lecture/12505246?start=75
+    const likeIds = post.likes.map(id => id.toString())
+    const authUserId = req.user._id.toString();
+    if (likeIds.includes(authUserId)) {
+        await post.likes.pull(authUserId)
+    } else {
+        await post.likes.push(authUserId)
+    }
+    await post.save();
+    res.json(post)
+};
+
+exports.toggleComment = async (req, res) => {
+    const { comment, postId } = req.body;
+    let operator;
+    let data;
+
+    if (req.url.includes('uncomment')) {
+        operator = "$pull";
+        data = { _id: comment._id }
+    } else {
+        operator = "$push";
+        data = { text: comment.text, postedBy: req.user._id };
+    }
+    const updatedPost = await Post.findOneAndUpdate(
+        { _id: postId },
+        { [operator]: { comments: data } },
+        { new: true }
+    ).populate('postedBy', '_id name avatar')
+    .populate('comments.postedBy', '_id name avatar');
+    res.json(updatedPost)
+};

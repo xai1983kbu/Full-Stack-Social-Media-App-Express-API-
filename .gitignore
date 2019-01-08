@@ -1,4 +1,8 @@
 node_modules
 .next
+.idea
 *.env
 .env
+help.txt
+static/uploads/
+package-lock.json

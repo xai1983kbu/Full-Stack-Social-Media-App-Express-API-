@@ -26,7 +26,26 @@ router.get("/api/auth/signout", authController.signout);
 /**
  * USER ROUTES: /api/users
  */
+// And if the route param matches :userId you can execute the handler for this in order to get a user by ID.
+// https://www.udemy.com/universal-react-with-nextjs-the-ultimate-guide/learn/v4/t/lecture/12505228?start=25
 router.param("userId", userController.getUserById);
+
+// https://www.udemy.com/universal-react-with-nextjs-the-ultimate-guide/learn/v4/t/lecture/12505234?start=40
+// Make sure to pace them above this route with the User ID program.
+// Otherwise it's certain that we will get an error.
+// And this is just because of how the Express router works.
+router.put(
+  "/api/users/follow",
+  authController.checkAuth,
+  catchErrors(userController.addFollowing),
+  catchErrors(userController.addFollower)
+);
+router.put(
+  "/api/users/unfollow",
+  authController.checkAuth,
+  catchErrors(userController.deleteFollowing),
+  catchErrors(userController.deleteFollower)
+);
 
 router
   .route("/api/users/:userId")
@@ -42,7 +61,7 @@ router
 router.get("/api/users", userController.getUsers);
 router.get(
   "/api/users/profile/:userId",
-  catchErrors(userController.getUserProfile)
+  userController.getUserProfile
 );
 router.get(
   "/api/users/feed/:userId",
@@ -50,18 +69,6 @@ router.get(
   catchErrors(userController.getUserFeed)
 );
 
-router.put(
-  "/api/users/follow",
-  authController.checkAuth,
-  catchErrors(userController.addFollowing),
-  catchErrors(userController.addFollower)
-);
-router.put(
-  "/api/users/unfollow",
-  authController.checkAuth,
-  catchErrors(userController.deleteFollowing),
-  catchErrors(userController.deleteFollower)
-);
 
 /**
  * POST ROUTES: /api/posts

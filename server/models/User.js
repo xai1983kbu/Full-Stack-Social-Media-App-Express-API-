@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// https://www.udemy.com/universal-react-with-nextjs-the-ultimate-guide/learn/v4/t/lecture/12505234?start=325
 const autoPopulateFollowingAndFollowers = function(next) {
   this.populate("following", "_id name avatar");
   this.populate("followers", "_id name avatar");
